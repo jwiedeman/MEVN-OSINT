@@ -1,0 +1,125 @@
+const Promise = require('bluebird')
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const URL = require('url');
+const puppeteer = require('puppeteer');
+const sitemap_stream_parser = require('sitemap-stream-parser');
+const fs = require("fs");
+const PORT = 3000; // Set a constant port
+
+process.setMaxListeners(Infinity); // y e e t
+// this prevents puppeteer from self lobotomizing during scraping
+
+app.use(cors({
+    origin: 'http://localhost:8080'
+}));
+// Spin up our server
+app.listen(PORT, () => console.log(`Listening on port ${PORT}.`));
+
+let reportJson = {};
+let promiseArr = [];
+let currentTarget = '';
+let tasks = []; // replace with pages 
+let site_pages =[]
+
+
+// Generate the sitemap 
+// Set our route
+app.get('/message', (req, res) => {
+    // Pull message from query string in request
+    let message = req.query.message;
+
+    // validate input
+    if (validURL(message) == true) {// if func true, gen sitemap from input
+        // Scrape the sitemap
+        generateSitemaps(message+'/sitemap.xml')
+
+            // Send it back
+            res.send(reportJson);
+            Promise.all(promiseArr).then(() => {
+                console.log('### Test Complete');
+              
+            });
+    } else {
+       
+            res.send('stuff');
+    }
+});
+
+
+
+for(i=0; i <= 50; i++){
+    tasks.push({
+        task_name: 'Task' + i
+    })
+}
+
+Promise.each(tasks,task => new Promise((resolve,reject)=>{
+    setTimeout(()=> {
+        resolve(task.task_name + ' ')
+    }, 500)
+}).then()).then(()=>{console.log('All done!')})
+
+
+
+
+function generateSitemaps(inputURL){
+    sitemap_stream_parser.parseSitemaps(urls, function (url) {
+        site_pages.push(url);
+        console.log('Found ' + url)
+    }, function (err, sitemap_stream_parser) {
+        console.log('Sitemapper process complete ')
+        /* lets make this happen later, for obvious reasons
+        site_pages.forEach(page => { // ! Probably slow this down so there is only 10 pages being requested / crawled at once
+            reportJson[page] = {}; // make anon instance of object for parent site
+            promiseArr.push(checkPage(page)); // get site && push to arr
+            console.log('       Testing  ', currentTarget);
+        });
+        Promise.all(promiseArr).then(() => {
+            console.log('Testing Complete');
+        });
+         */
+    });
+}
+
+
+
+
+
+
+
+
+
+// UTILITY FUNCTIONS 
+
+function validURL(str) {
+    var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+        '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locator
+    return !!pattern.test(str);
+}
+
+
+function storeData(platform, dataObj) {
+    let {
+        id,
+        hitType,
+        payload
+    } = dataObj; // assign references to the data parameter
+
+    if (typeof id != undefined && typeof hitType != undefined) { // check if incoming data exists, proceed if true
+        let data = _page[platform]
+        data[id] = (typeof id != undefined) ? {
+            'id': id,
+            'hitType': hitType,
+            'payload': payload
+        } : {}
+        data[id][hitType] = (typeof hitType != undefined) ? hitType : {}
+        data[id][hitType][payload] = (payload != undefined) ? payload : {}
+
+    }
+}
